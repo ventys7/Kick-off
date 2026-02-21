@@ -6,7 +6,7 @@ const LEAGUES = {
 };
 
 // CORS proxy per aggirare il blocco di Sofascore
-const CORS_PROXY = 'https://corsproxy.io/?';
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
 // Cache per evitare troppe chiamate API
 let cachedData = {};
