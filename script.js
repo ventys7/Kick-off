@@ -5,8 +5,9 @@ const LEAGUES = {
     laliga: { id: 8, name: 'La Liga', elementId: 'laliga-content' }
 };
 
-// CORS proxy per aggirare il blocco di Sofascore
-const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+// Netlify function proxy (sarà disponibile dopo il deploy)
+const USE_PROXY = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
+const PROXY_URL = '/.netlify/functions/proxy?url=';
 
 // Cache per evitare troppe chiamate API
 let cachedData = {};
@@ -32,10 +33,10 @@ async function fetchLeagueData(leagueId) {
             const dateStr = date.toISOString().split('T')[0];
             
             const url = `https://www.sofascore.com/api/v1/sport/football/scheduled-events/${dateStr}`;
-            const proxiedUrl = CORS_PROXY + encodeURIComponent(url);
+            const finalUrl = USE_PROXY ? PROXY_URL + encodeURIComponent(url) : url;
             
             try {
-                const response = await fetch(proxiedUrl);
+                const response = await fetch(finalUrl);
                 if (!response.ok) continue;
                 
                 const data = await response.json();
