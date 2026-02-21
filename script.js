@@ -32,22 +32,11 @@ async function fetchLeagueData(leagueId) {
         
         const data = await response.json();
         
-        console.log('FotMob API response for league', leagueId, ':', data);
-        console.log('Data keys:', Object.keys(data));
-        
-        // Estrai tutte le partite da fixtures e matches
+        // Estrai tutte le partite da fixtures
         const allMatches = [];
         
-        // Prova diverse strutture possibili
-        if (data.matches && data.matches.allMatches) {
-            console.log('Found matches in data.matches.allMatches');
-            allMatches.push(...data.matches.allMatches);
-        } else if (data.allMatches) {
-            console.log('Found matches in data.allMatches');
-            allMatches.push(...data.allMatches);
-        } else if (Array.isArray(data.matches)) {
-            console.log('Found matches array in data.matches');
-            allMatches.push(...data.matches);
+        if (data.fixtures && data.fixtures.allMatches) {
+            allMatches.push(...data.fixtures.allMatches);
         }
         
         console.log('Total matches found:', allMatches.length);
