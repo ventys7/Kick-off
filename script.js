@@ -5,6 +5,9 @@ const LEAGUES = {
     laliga: { id: 8, name: 'La Liga', elementId: 'laliga-content' }
 };
 
+// CORS proxy per aggirare il blocco di Sofascore
+const CORS_PROXY = 'https://corsproxy.io/?';
+
 // Cache per evitare troppe chiamate API
 let cachedData = {};
 const CACHE_DURATION = 60000; // 1 minuto
@@ -29,9 +32,10 @@ async function fetchLeagueData(leagueId) {
             const dateStr = date.toISOString().split('T')[0];
             
             const url = `https://www.sofascore.com/api/v1/sport/football/scheduled-events/${dateStr}`;
+            const proxiedUrl = CORS_PROXY + encodeURIComponent(url);
             
             try {
-                const response = await fetch(url);
+                const response = await fetch(proxiedUrl);
                 if (!response.ok) continue;
                 
                 const data = await response.json();
