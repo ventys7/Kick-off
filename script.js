@@ -20,8 +20,20 @@ async function fetchLeagueData(leagueId) {
     }
     
     try {
-        // FotMob API endpoint per le partite di una lega
-        const season = '2025/2026';
+        // Auto-detect current season based on date
+        // Football seasons start in August and end in May
+        const now = new Date();
+        const currentYear = now.getFullYear();
+        const currentMonth = now.getMonth() + 1; // 0-indexed
+        
+        // If we're in Aug-Dec, season is currentYear/nextYear
+        // If we're in Jan-Jul, season is previousYear/currentYear
+        const season = currentMonth >= 8 
+            ? `${currentYear}/${currentYear + 1}`
+            : `${currentYear - 1}/${currentYear}`;
+        
+        console.log('Auto-detected season:', season);
+        
         const url = `${API_BASE}/leagues?id=${leagueId}&season=${encodeURIComponent(season)}`;
         
         const response = await fetch(url);
