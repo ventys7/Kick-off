@@ -21,7 +21,8 @@ async function fetchLeagueData(leagueId) {
     
     try {
         // FotMob API endpoint per le partite di una lega
-        const url = `${API_BASE}/leagues?id=${leagueId}`;
+        const season = '2025/2026';
+        const url = `${API_BASE}/leagues?id=${leagueId}&season=${encodeURIComponent(season)}`;
         
         const response = await fetch(url);
         if (!response.ok) {
