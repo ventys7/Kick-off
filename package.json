@@ -1,0 +1,8 @@
+{
+  "name": "kick-off-timer",
+  "version": "1.0.0",
+  "description": "Football match countdown timer",
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  }
+}
