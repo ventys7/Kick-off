@@ -1,13 +1,11 @@
-// League IDs for Sofascore API
+// League IDs for FotMob API
 const LEAGUES = {
-    seriea: { id: 23, name: 'Serie A', elementId: 'seriea-content' },
-    premier: { id: 17, name: 'Premier League', elementId: 'premier-content' },
-    laliga: { id: 8, name: 'La Liga', elementId: 'laliga-content' }
+    seriea: { id: 55, name: 'Serie A', elementId: 'seriea-content' },
+    premier: { id: 47, name: 'Premier League', elementId: 'premier-content' },
+    laliga: { id: 87, name: 'La Liga', elementId: 'laliga-content' }
 };
 
-// Netlify function proxy (sarà disponibile dopo il deploy)
-const USE_PROXY = window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1';
-const PROXY_URL = '/.netlify/functions/proxy?url=';
+const API_BASE = 'https://www.fotmob.com/api';
 
 // Cache per evitare troppe chiamate API
 let cachedData = {};
@@ -22,41 +20,48 @@ async function fetchLeagueData(leagueId) {
     }
     
     try {
-        // Raccoglie eventi da più giorni per avere dati completi
-        const today = new Date();
-        const allEvents = [];
+        // FotMob API endpoint per le partite di una lega
+        const url = `${API_BASE}/leagues?id=${leagueId}`;
         
-        // Prendi eventi da -7 a +30 giorni per vedere giornate in corso e future
-        for (let i = -7; i < 30; i++) {
-            const date = new Date(today);
-            date.setDate(date.getDate() + i);
-            const dateStr = date.toISOString().split('T')[0];
-            
-            const url = `https://www.sofascore.com/api/v1/sport/football/scheduled-events/${dateStr}`;
-            const finalUrl = USE_PROXY ? PROXY_URL + encodeURIComponent(url) : url;
-            
-            try {
-                const response = await fetch(finalUrl);
-                if (!response.ok) continue;
-                
-                const data = await response.json();
-                
-                if (data.events) {
-                    const leagueEvents = data.events.filter(event => 
-                        event.tournament?.uniqueTournament?.id === leagueId
-                    );
-                    allEvents.push(...leagueEvents);
-                }
-            } catch (e) {
-                continue;
+        const response = await fetch(url);
+        if (!response.ok) {
+            console.error(`API error: ${response.status}`);
+            return null;
+        }
+        
+        const data = await response.json();
+        
+        // Estrai tutte le partite da fixtures e matches
+        const allMatches = [];
+        
+        // FotMob ha la struttura: data.matches.allMatches
+        if (data.matches && data.matches.allMatches) {
+            allMatches.push(...data.matches.allMatches);
+        }
+        
+        // Converti formato FotMob in formato compatibile
+        const events = allMatches.map(match => ({
+            id: match.id,
+            startTimestamp: new Date(match.status.utcTime).getTime() / 1000,
+            homeTeam: {
+                id: match.home.id,
+                name: match.home.name,
+                shortName: match.home.shortName || match.home.name
+            },
+            awayTeam: {
+                id: match.away.id,
+                name: match.away.name,
+                shortName: match.away.shortName || match.away.name
+            },
+            status: {
+                type: match.status.finished ? 'finished' : (match.status.started ? 'inprogress' : 'notstarted')
+            },
+            roundInfo: {
+                round: match.round
             }
-        }
+        }));
         
-        if (allEvents.length === 0) {
-            return { events: [] };
-        }
-        
-        const result = { events: allEvents };
+        const result = { events };
         
         // Salva in cache
         cachedData[leagueId] = {
@@ -251,7 +256,7 @@ async function updateLeagueTimer(league) {
             matchesHTML += `
                 <div class="match-item">
                     <div class="team">
-                        <img src="https://api.sofascore.app/api/v1/team/${homeId}/image" 
+                        <img src="https://images.fotmob.com/image_resources/logo/teamlogo/${homeId}.png"
                              alt="${homeTeam}" 
                              class="team-logo"
                              onerror="this.style.display='none'">
@@ -259,7 +264,7 @@ async function updateLeagueTimer(league) {
                     </div>
                     <div class="vs">vs</div>
                     <div class="team">
-                        <img src="https://api.sofascore.app/api/v1/team/${awayId}/image" 
+                        <img src="https://images.fotmob.com/image_resources/logo/teamlogo/${awayId}.png"
                              alt="${awayTeam}" 
                              class="team-logo"
                              onerror="this.style.display='none'">
