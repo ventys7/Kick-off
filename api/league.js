@@ -1,91 +1,68 @@
 const API_BASE = "https://www.fotmob.com/api";
 
-// Cache in memoria (per istanza serverless)
+// Cache in memoria per funzionalità edge
 const cache = {};
 
 function getCurrentSeason() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth() + 1;
 
-  return month >= 8
-    ? `${year}/${year + 1}`
-    : `${year - 1}/${year}`;
+    return month >= 8
+        ? `${year}/${year + 1}`
+        : `${year - 1}/${year}`;
 }
 
-// Calcolo TTL adattivo
 function calculateTTL(nextKickoff) {
-  if (!nextKickoff) return 6 * 60 * 60 * 1000; // 6h default
+    if (!nextKickoff) return 60 * 60 * 1000; // default 1h
 
-  const now = Date.now();
-  const diff = nextKickoff - now;
+    const now = Date.now();
+    const diff = nextKickoff - now;
 
-  if (diff < 30 * 60 * 1000) return 60 * 1000; // <30min → 1min
-  if (diff < 2 * 60 * 60 * 1000) return 5 * 60 * 1000; // <2h → 5min
-  if (diff < 24 * 60 * 60 * 1000) return 15 * 60 * 1000; // <24h → 15min
-
-  return 60 * 60 * 1000; // default 1h
+    if (diff < 30 * 60 * 1000) return 60 * 1000;
+    if (diff < 2 * 60 * 60 * 1000) return 5 * 60 * 1000;
+    if (diff < 24 * 60 * 60 * 1000) return 15 * 60 * 1000;
+    return 60 * 60 * 1000;
 }
 
 export default async function handler(req, res) {
-  const leagueId = req.query.id;
+    const leagueId = req.query.id;
+    if (!leagueId) return res.status(400).json({ error: "Missing league id" });
 
-  if (!leagueId) {
-    return res.status(400).json({ error: "Missing league id" });
-  }
-
-  const now = Date.now();
-
-  // Cache hit
-  if (cache[leagueId] && now < cache[leagueId].expires) {
-    return res.status(200).json(cache[leagueId].data);
-  }
-
-  try {
-    const season = getCurrentSeason();
-    const url = `${API_BASE}/leagues?id=${leagueId}&season=${encodeURIComponent(season)}`;
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error("FotMob error");
+    const now = Date.now();
+    // Cache hit
+    if (cache[leagueId] && now < cache[leagueId].expires) {
+        res.setHeader("Cache-Control", `s-maxage=${Math.floor((cache[leagueId].expires - now) / 1000)}`);
+        return res.status(200).json(cache[leagueId].data);
     }
 
-    const data = await response.json();
+    try {
+        const season = getCurrentSeason();
+        const url = `${API_BASE}/leagues?id=${leagueId}&season=${encodeURIComponent(season)}`;
+        const fetchRes = await fetch(url);
 
-    const matches = data.fixtures?.allMatches || [];
-    const nowSec = now / 1000;
+        if (!fetchRes.ok) throw new Error("FotMob API error");
 
-    const futureMatches = matches
-      .map(m => ({
-        start: new Date(m.status.utcTime).getTime()
-      }))
-      .filter(m => m.start / 1000 > nowSec)
-      .sort((a, b) => a.start - b.start);
+        const data = await fetchRes.json();
 
-    const nextKickoff = futureMatches.length
-      ? futureMatches[0].start
-      : null;
+        const allMatches = data.fixtures?.allMatches || [];
+        const nowSec = now / 1000;
 
-    const ttl = calculateTTL(nextKickoff);
+        const futureMatches = allMatches
+            .map(m => ({ start: new Date(m.status.utcTime).getTime() }))
+            .filter(m => m.start / 1000 > nowSec)
+            .sort((a, b) => a.start - b.start);
 
-    cache[leagueId] = {
-      data,
-      expires: now + ttl
-    };
+        const nextKickoff = futureMatches.length ? futureMatches[0].start : null;
+        const ttl = calculateTTL(nextKickoff);
 
-    // Cache header CDN
-    res.setHeader("Cache-Control", `s-maxage=${Math.floor(ttl / 1000)}`);
+        cache[leagueId] = { data, expires: now + ttl };
 
-    return res.status(200).json(data);
+        res.setHeader("Cache-Control", `s-maxage=${Math.floor(ttl / 1000)}`);
+        return res.status(200).json(data);
 
-  } catch (err) {
-    // Backoff 15 min in caso di errore
-    cache[leagueId] = {
-      data: { error: "temporary error" },
-      expires: now + 15 * 60 * 1000
-    };
-
-    return res.status(500).json({ error: "API failure" });
-  }
+    } catch (error) {
+        cache[leagueId] = { data: { error: "temporary error" }, expires: now + 15 * 60 * 1000 };
+        return res.status(500).json({ error: "API failure" });
+    }
 }
