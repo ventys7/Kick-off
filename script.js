@@ -1,331 +1,181 @@
-// League IDs for FotMob API
+// ============================
+// CONFIG
+// ============================
+
 const LEAGUES = {
-    seriea: { id: 55, name: 'Serie A', elementId: 'seriea-content' },
-    premier: { id: 47, name: 'Premier League', elementId: 'premier-content' },
-    laliga: { id: 87, name: 'La Liga', elementId: 'laliga-content' }
+  seriea: { id: 55, elementId: "seriea-content" },
+  premier: { id: 47, elementId: "premier-content" },
+  laliga: { id: 87, elementId: "laliga-content" }
 };
 
-const API_BASE = 'https://www.fotmob.com/api';
+let nextKickoffs = {};
+let schedulerTimeout = null;
 
-// Cache per evitare troppe chiamate API
-let cachedData = {};
-const CACHE_DURATION = 60000; // 1 minuto
+// ============================
+// UTIL
+// ============================
+
+function formatCountdown(ms) {
+  if (ms <= 0) return "INIZIATA!";
+
+  const s = Math.floor(ms / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+
+  if (d > 0) return `${d}g ${h % 24}h`;
+  if (h > 0) return `${h}h ${m % 60}m`;
+  if (m > 0) return `${m}m ${s % 60}s`;
+  return `${s}s`;
+}
+
+function formatDateTime(ts) {
+  return new Date(ts).toLocaleString("it-IT", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit"
+  });
+}
+
+// ============================
+// CREATE DOM ONCE
+// ============================
+
+function createLeagueUI(league) {
+  const container = document.getElementById(league.elementId);
+
+  container.innerHTML = `
+    <div class="matchday-number"></div>
+    <div class="match-item">
+      <div class="team home"></div>
+      <div class="vs">vs</div>
+      <div class="team away"></div>
+    </div>
+    <div class="match-time"></div>
+    <div class="countdown">
+      <div class="countdown-label">Mancano</div>
+      <div class="countdown-timer">--</div>
+    </div>
+  `;
+}
+
+// ============================
+// FETCH FROM VERCEL API
+// ============================
 
 async function fetchLeagueData(leagueId) {
-    const now = Date.now();
-    
-    // Controlla cache
-    if (cachedData[leagueId] && (now - cachedData[leagueId].timestamp) < CACHE_DURATION) {
-        return cachedData[leagueId].data;
-    }
-    
-    try {
-        // Auto-detect current season based on date
-        // Football seasons start in August and end in May
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth() + 1; // 0-indexed
-        
-        // If we're in Aug-Dec, season is currentYear/nextYear
-        // If we're in Jan-Jul, season is previousYear/currentYear
-        const season = currentMonth >= 8 
-            ? `${currentYear}/${currentYear + 1}`
-            : `${currentYear - 1}/${currentYear}`;
-        
-        console.log('Auto-detected season:', season);
-        
-        const url = `${API_BASE}/leagues?id=${leagueId}&season=${encodeURIComponent(season)}`;
-        
-        const response = await fetch(url);
-        if (!response.ok) {
-            console.error(`API error: ${response.status}`);
-            return null;
-        }
-        
-        const data = await response.json();
-        
-        // Estrai tutte le partite da fixtures
-        const allMatches = [];
-        
-        if (data.fixtures && data.fixtures.allMatches) {
-            allMatches.push(...data.fixtures.allMatches);
-        }
-        
-        console.log('Total matches found:', allMatches.length);
-        
-        // Converti formato FotMob in formato compatibile
-        const events = allMatches.map(match => ({
-            id: match.id,
-            startTimestamp: new Date(match.status.utcTime).getTime() / 1000,
-            homeTeam: {
-                id: match.home.id,
-                name: match.home.name,
-                shortName: match.home.shortName || match.home.name
-            },
-            awayTeam: {
-                id: match.away.id,
-                name: match.away.name,
-                shortName: match.away.shortName || match.away.name
-            },
-            status: {
-                type: match.status.finished ? 'finished' : (match.status.started ? 'inprogress' : 'notstarted')
-            },
-            roundInfo: {
-                round: match.round
-            }
-        }));
-        
-        const result = { events };
-        
-        // Salva in cache
-        cachedData[leagueId] = {
-            data: result,
-            timestamp: now
-        };
-        
-        return result;
-    } catch (error) {
-        console.error(`Errore nel recupero dati per league ${leagueId}:`, error);
-        console.error('Dettagli errore:', error.message);
-        return null;
-    }
+  const response = await fetch(`/api/league?id=${leagueId}`);
+  if (!response.ok) return null;
+  return await response.json();
 }
 
-function formatCountdown(milliseconds) {
-    if (milliseconds <= 0) {
-        return 'INIZIATA!';
-    }
-    
-    const seconds = Math.floor(milliseconds / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    
-    if (days > 0) {
-        const remainingHours = hours % 24;
-        return `${days}g ${remainingHours}h`;
-    } else if (hours > 0) {
-        const remainingMinutes = minutes % 60;
-        return `${hours}h ${remainingMinutes}m`;
-    } else if (minutes > 0) {
-        const remainingSeconds = seconds % 60;
-        return `${minutes}m ${remainingSeconds}s`;
+// ============================
+// UPDATE SINGLE LEAGUE
+// ============================
+
+async function updateLeague(league) {
+  const data = await fetchLeagueData(league.id);
+  if (!data?.fixtures?.allMatches) return;
+
+  const now = Date.now();
+
+  const futureMatches = data.fixtures.allMatches
+    .map(match => ({
+      start: new Date(match.status.utcTime).getTime(),
+      home: match.home.name,
+      away: match.away.name,
+      round: match.round
+    }))
+    .filter(m => m.start > now)
+    .sort((a, b) => a.start - b.start);
+
+  if (!futureMatches.length) return;
+
+  const nextMatch = futureMatches[0];
+  nextKickoffs[league.id] = nextMatch.start;
+
+  const container = document.getElementById(league.elementId);
+
+  container.querySelector(".matchday-number").textContent =
+    `Giornata ${nextMatch.round || "N/A"}`;
+
+  container.querySelector(".home").textContent = nextMatch.home;
+  container.querySelector(".away").textContent = nextMatch.away;
+
+  container.querySelector(".match-time").textContent =
+    formatDateTime(nextMatch.start);
+}
+
+// ============================
+// COUNTDOWN LOOP (UI only)
+// ============================
+
+function updateCountdowns() {
+  const now = Date.now();
+
+  Object.values(LEAGUES).forEach(league => {
+    const kickoff = nextKickoffs[league.id];
+    if (!kickoff) return;
+
+    const el = document.querySelector(
+      `#${league.elementId} .countdown-timer`
+    );
+
+    if (!el) return;
+
+    const diff = kickoff - now;
+    el.textContent = formatCountdown(diff);
+
+    if (diff < 3600000) {
+      el.classList.add("urgent");
     } else {
-        return `${seconds}s`;
+      el.classList.remove("urgent");
     }
+  });
 }
 
-function formatDateTime(timestamp) {
-    const date = new Date(timestamp * 1000);
-    const options = { 
-        weekday: 'long', 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    };
-    return date.toLocaleDateString('it-IT', options);
-}
+setInterval(updateCountdowns, 1000);
 
-async function updateLeagueTimer(league) {
-    const element = document.getElementById(league.elementId);
-    
-    try {
-        const data = await fetchLeagueData(league.id);
-        
-        if (!data) {
-            element.innerHTML = '<div class="error">Errore di connessione. Verifica la rete.</div>';
-            return;
-        }
-        
-        if (!data.events || data.events.length === 0) {
-            element.innerHTML = '<div class="error">Nessuna partita in programma</div>';
-            console.log(`Nessun evento trovato per ${league.name}`);
-            return;
-        }
-        
-        const now = Date.now() / 1000;
-        
-        // Separa partite passate e future
-        const pastMatches = data.events.filter(e => e.startTimestamp <= now).sort((a, b) => b.startTimestamp - a.startTimestamp);
-        const futureMatches = data.events.filter(e => e.startTimestamp > now).sort((a, b) => a.startTimestamp - b.startTimestamp);
-        
-        if (futureMatches.length === 0) {
-            element.innerHTML = '<div class="error">Nessuna partita in programma</div>';
-            return;
-        }
-        
-        // Trova l'ultima giornata iniziata (se esiste)
-        let lastStartedRound = null;
-        if (pastMatches.length > 0) {
-            lastStartedRound = pastMatches[0].roundInfo?.round;
-        }
-        
-        // Trova la prossima giornata
-        let nextRoundMatches;
-        if (lastStartedRound) {
-            // Cerca la prima giornata futura diversa dall'ultima iniziata
-            const roundsMap = new Map();
-            futureMatches.forEach(match => {
-                const round = match.roundInfo?.round;
-                if (round && round !== lastStartedRound) {
-                    if (!roundsMap.has(round)) {
-                        roundsMap.set(round, []);
-                    }
-                    roundsMap.get(round).push(match);
-                }
-            });
-            
-            if (roundsMap.size === 0) {
-                // Se non ci sono giornate diverse, prendi la prima futura
-                nextRoundMatches = [futureMatches[0]];
-            } else {
-                // Prendi la giornata con la prima partita cronologicamente
-                const sortedRounds = Array.from(roundsMap.entries())
-                    .sort((a, b) => a[1][0].startTimestamp - b[1][0].startTimestamp);
-                nextRoundMatches = sortedRounds[0][1];
-            }
-        } else {
-            // Nessuna partita iniziata, prendi la prima giornata futura
-            const firstRound = futureMatches[0].roundInfo?.round;
-            nextRoundMatches = futureMatches.filter(m => m.roundInfo?.round === firstRound);
-        }
-        
-        // Ordina per timestamp
-        nextRoundMatches.sort((a, b) => a.startTimestamp - b.startTimestamp);
-        
-        // Trova le partite che iniziano allo stesso momento della prima
-        const firstMatchTime = nextRoundMatches[0].startTimestamp;
-        const simultaneousMatches = nextRoundMatches.filter(m => 
-            Math.abs(m.startTimestamp - firstMatchTime) < 60 // Entro 1 minuto
-        );
-        
-        // Rimuovi duplicati basandoti sull'ID dell'evento
-        const uniqueMatches = [];
-        const seenIds = new Set();
-        simultaneousMatches.forEach(match => {
-            if (!seenIds.has(match.id)) {
-                seenIds.add(match.id);
-                uniqueMatches.push(match);
-            }
-        });
-        
-        const roundInfo = nextRoundMatches[0].roundInfo?.round || 'N/A';
-        const startTime = firstMatchTime;
-        const timeUntilMatch = (startTime * 1000) - Date.now();
-        const countdown = formatCountdown(timeUntilMatch);
-        const isUrgent = timeUntilMatch < 3600000;
-        
-        // Controlla tutte le giornate in corso
-        let inProgressBanner = '';
-        const inProgressRounds = new Set();
-        
-        // Trova tutte le giornate che hanno partite già iniziate ma non tutte completate
-        const roundsStatus = new Map();
-        data.events.forEach(match => {
-            const round = match.roundInfo?.round;
-            if (!round) return;
-            
-            if (!roundsStatus.has(round)) {
-                roundsStatus.set(round, { started: false, allFinished: true });
-            }
-            
-            const status = roundsStatus.get(round);
-            if (match.startTimestamp <= now) {
-                status.started = true;
-            }
-            if (match.status?.type === 'inprogress' || match.startTimestamp > now) {
-                status.allFinished = false;
-            }
-        });
-        
-        // Trova le giornate in corso (iniziate ma non finite)
-        roundsStatus.forEach((status, round) => {
-            if (status.started && !status.allFinished) {
-                inProgressRounds.add(round);
-            }
-        });
-        
-        if (inProgressRounds.size > 0) {
-            const rounds = Array.from(inProgressRounds).sort((a, b) => a - b);
-            const roundsText = rounds.length === 1 
-                ? `Giornata ${rounds[0]}` 
-                : `Giornate ${rounds.join(', ')}`;
-            inProgressBanner = `
-                <div class="in-progress-banner">
-                    🟢 ${roundsText} in corso
-                </div>
-            `;
-        }
-        
-        // Genera HTML per le partite
-        let matchesHTML = '';
-        uniqueMatches.forEach(match => {
-            const homeTeam = match.homeTeam.shortName || match.homeTeam.name;
-            const awayTeam = match.awayTeam.shortName || match.awayTeam.name;
-            const homeId = match.homeTeam.id;
-            const awayId = match.awayTeam.id;
-            
-            matchesHTML += `
-                <div class="match-item">
-                    <div class="team">
-                        <img src="https://images.fotmob.com/image_resources/logo/teamlogo/${homeId}.png"
-                             alt="${homeTeam}" 
-                             class="team-logo"
-                             onerror="this.style.display='none'">
-                        <span class="team-name">${homeTeam}</span>
-                    </div>
-                    <div class="vs">vs</div>
-                    <div class="team">
-                        <img src="https://images.fotmob.com/image_resources/logo/teamlogo/${awayId}.png"
-                             alt="${awayTeam}" 
-                             class="team-logo"
-                             onerror="this.style.display='none'">
-                        <span class="team-name">${awayTeam}</span>
-                    </div>
-                </div>
-            `;
-        });
-        
-        // Genera HTML completo
-        element.innerHTML = `
-            ${inProgressBanner}
-            <div class="matchday-info">
-                <div class="matchday-number">Giornata ${roundInfo}</div>
-                ${uniqueMatches.length > 1 ? `<div class="multiple-matches">${uniqueMatches.length} partite contemporanee</div>` : ''}
-            </div>
-            <div class="next-match">
-                ${matchesHTML}
-                <div class="match-time">${formatDateTime(startTime)}</div>
-            </div>
-            <div class="countdown">
-                <div class="countdown-label">Mancano</div>
-                <div class="countdown-timer ${isUrgent ? 'urgent' : ''}">${countdown}</div>
-            </div>
-        `;
-        
-    } catch (error) {
-        console.error(`Errore aggiornamento ${league.name}:`, error);
-        element.innerHTML = '<div class="error">Errore nel caricamento</div>';
+// ============================
+// SMART SCHEDULER (FRONTEND LIGHT)
+// ============================
+
+function scheduleNextUpdate() {
+  if (schedulerTimeout) clearTimeout(schedulerTimeout);
+
+  let interval = 30 * 60 * 1000; // fallback 30min
+
+  const now = Date.now();
+
+  Object.values(nextKickoffs).forEach(kickoff => {
+    const diff = kickoff - now;
+
+    if (diff < 30 * 60 * 1000) {
+      interval = Math.min(interval, 2 * 60 * 1000);
+    } else if (diff < 2 * 60 * 60 * 1000) {
+      interval = Math.min(interval, 5 * 60 * 1000);
+    } else if (diff < 24 * 60 * 60 * 1000) {
+      interval = Math.min(interval, 15 * 60 * 1000);
     }
+  });
+
+  schedulerTimeout = setTimeout(updateAll, interval);
 }
 
-async function updateAllTimers() {
-    await Promise.all([
-        updateLeagueTimer(LEAGUES.seriea),
-        updateLeagueTimer(LEAGUES.premier),
-        updateLeagueTimer(LEAGUES.laliga)
-    ]);
+// ============================
+// MASTER UPDATE
+// ============================
+
+async function updateAll() {
+  await Promise.all(Object.values(LEAGUES).map(updateLeague));
+  scheduleNextUpdate();
 }
 
-// Inizializza
-updateAllTimers();
+// ============================
+// INIT
+// ============================
 
-// Aggiorna ogni secondo per il countdown
-setInterval(updateAllTimers, 1000);
-
-// Forza aggiornamento dati dall'API ogni minuto
-setInterval(() => {
-    cachedData = {};
-}, 60000);
+Object.values(LEAGUES).forEach(createLeagueUI);
+updateAll();
