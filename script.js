@@ -4,14 +4,7 @@ const LEAGUES = {
     laliga: { id: 87, name: 'La Liga', elementId: 'laliga-content' }
 };
 
-const API_BASE = 'https://api.football-data.org/v4';
-const API_TOKEN = 'a88e43e5191141e2b2b2501d42f67541';
-
-const LEAGUE_MAP = {
-    55: "SA",
-    47: "PL",
-    87: "PD"
-};
+const API_BASE = '/api/league';
 
 // Cache per evitare troppe chiamate API
 let cachedData = {};
@@ -25,20 +18,9 @@ async function fetchLeagueData(leagueId) {
     }
     
     try {
-        const now = new Date();
-        const currentYear = now.getFullYear();
-        const currentMonth = now.getMonth() + 1;
+        const url = `${API_BASE}/${leagueId}`;
         
-        const season = currentMonth >= 8 ? currentYear : currentYear - 1;
-        
-        console.log('Auto-detected season:', season);
-        
-        const competitionCode = LEAGUE_MAP[leagueId];
-        const url = `${API_BASE}/competitions/${competitionCode}/matches?season=${season}`;
-        
-        const response = await fetch(url, {
-            headers: { "X-Auth-Token": API_TOKEN }
-        });
+        const response = await fetch(url);
         
         if (!response.ok) {
             console.error(`API error: ${response.status}`);
@@ -47,32 +29,14 @@ async function fetchLeagueData(leagueId) {
         
         const data = await response.json();
         
-        const allMatches = data.matches || [];
+        if (data.error) {
+            console.error(`API error: ${data.error}`);
+            return null;
+        }
         
-        console.log('Total matches found:', allMatches.length);
+        const events = data.events || [];
         
-        const events = allMatches.map(match => ({
-            id: match.id,
-            startTimestamp: new Date(match.utcDate).getTime() / 1000,
-            homeTeam: {
-                id: match.homeTeam.id,
-                name: match.homeTeam.name,
-                shortName: match.homeTeam.shortName || match.homeTeam.name,
-                crest: match.homeTeam.crest || ''
-            },
-            awayTeam: {
-                id: match.awayTeam.id,
-                name: match.awayTeam.name,
-                shortName: match.awayTeam.shortName || match.awayTeam.name,
-                crest: match.awayTeam.crest || ''
-            },
-            status: {
-                type: match.status === "FINISHED" ? "finished" : (match.status === "IN_PLAY" ? "inprogress" : "notstarted")
-            },
-            roundInfo: {
-                round: match.matchday
-            }
-        }));
+        console.log('Total matches found:', events.length);
         
         const result = { events };
         
