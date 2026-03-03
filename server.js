@@ -4,7 +4,7 @@ const app = express();
 const PORT = 3000;
 
 const API_BASE = "https://api.football-data.org/v4";
-const API_TOKEN = process.env.FOOTBALL_DATA_TOKEN || "a88e43e5191141e2b2b2501d42f67541";
+const API_TOKEN = process.env.FOOTBALL_DATA_TOKEN;
 const CACHE_DURATION = 5 * 60 * 1000;
 
 const cache = {};
