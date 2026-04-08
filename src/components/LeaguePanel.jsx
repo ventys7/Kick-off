@@ -50,25 +50,28 @@ function MatchRow({ match }) {
 }
 
 export default function LeaguePanel({ league, data, loading }) {
+    const inProgressRounds = data?.inProgressRounds || [];
+    const roundsText = inProgressRounds.length > 1 
+        ? inProgressRounds.sort((a, b) => a - b).join(', ') 
+        : inProgressRounds[0] || '';
+
     return (
         <div style={{ background: '#0F0F12' }}>
-            <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #1E1E24' }}>
+            <div className="px-5 py-4" style={{ borderBottom: '1px solid #1E1E24' }}>
                 <div className="flex items-center gap-3">
                     <span className="text-xl">{league.flag}</span>
-                    <div>
+                    <div className="flex-1">
                         <p className="font-black uppercase tracking-tight text-white" style={{ fontSize: 15 }}>
                             {league.name}
+                            {inProgressRounds.length > 0 && (
+                                <span className="ml-2 text-white/60" style={{ fontSize: 11 }}>
+                                    — IN CORSO GIORNATA {roundsText}
+                                </span>
+                            )}
                         </p>
                         <p className="mono">{league.country.toUpperCase()} // {league.code}</p>
                     </div>
                 </div>
-
-                {data?.inProgressRounds?.length > 0 && (
-                    <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#ffffff', animation: 'pulse-glow 1.5s infinite' }} />
-                        <span className="mono text-white" style={{ fontSize: 10 }}>LIVE</span>
-                    </div>
-                )}
             </div>
 
             <div className="px-5 pt-5 pb-6">
