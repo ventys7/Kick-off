@@ -84,10 +84,10 @@ export default function LeaguePanel({ league, data, loading }) {
                     </div>
                 ) : (
                     <>
-                        <div className="flex items-center justify-between mb-4">
+                        <div className="text-center mb-4">
                             <p className="mono">GIORNATA {data.round}</p>
                             {data.matches.length > 1 && (
-                                <p className="mono">{data.matches.length} PARTITE CONTEMP.</p>
+                                <p className="mono mt-1">{data.matches.length} PARTITE CONTEMP.</p>
                             )}
                         </div>
 
@@ -99,7 +99,7 @@ export default function LeaguePanel({ league, data, loading }) {
 
                         <div className="text-center">
                             <CountdownDisplay targetTimestamp={data.startTimestamp} />
-                            <p className="mono mt-3" style={{ color: '#88888D', fontSize: 11 }}>
+                            <p className="mono mt-3" style={{ color: '#AAAAAA', fontSize: 13 }}>
                                 {new Date(data.startTimestamp * 1000).toLocaleDateString('it-IT', {
                                     weekday: 'short',
                                     day: '2-digit',

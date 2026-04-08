@@ -40,18 +40,10 @@ export default function Home() {
     const [leagueData, setLeagueData] = useState({});
     const [loading, setLoading] = useState({});
     const [tick, setTick] = useState(0);
-    const [scrolled, setScrolled] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
     const [isFetching, setIsFetching] = useState(false);
-    const [flashLeague, setFlashLeague] = useState(null);
 
     const enabledLeagues = LEAGUES.filter(l => !disabledLeagues.includes(l.key));
-
-    useEffect(() => {
-        const handleScroll = () => setScrolled(window.scrollY > 80);
-        window.addEventListener('scroll', handleScroll, { passive: true });
-        return () => window.removeEventListener('scroll', handleScroll);
-    }, []);
 
     useEffect(() => {
         const interval = setInterval(() => setTick(t => t + 1), 1000);
@@ -74,7 +66,7 @@ export default function Home() {
         }
         setInitialLoading(false);
         setIsFetching(false);
-    }, [enabledLeagues]);
+    }, [enabledLeagues, isFetching, leagueData]);
 
     useEffect(() => {
         fetchAll();
@@ -84,8 +76,6 @@ export default function Home() {
         setDisabledLeagues(prev => {
             const next = prev.includes(key) ? prev.filter(k => k !== key) : [...prev, key];
             saveDisabledLeagues(next);
-            setFlashLeague(key);
-            setTimeout(() => setFlashLeague(null), 600);
             return next;
         });
     };
@@ -114,14 +104,7 @@ export default function Home() {
 
     return (
         <div className="min-h-screen">
-            {flashLeague && (
-                <div
-                    className="fixed inset-0 pointer-events-none z-50"
-                    style={{ background: 'rgba(255,255,255,0.03)', animation: 'pulse-glow 0.6s ease-out' }}
-                />
-            )}
-
-            <StickyBar visible={scrolled} nextMatch={globalNext} />
+            <StickyBar visible={false} nextMatch={globalNext} />
 
             <header className="relative px-6 pt-12 pb-8 md:px-16 md:pt-16">
                 <div className="text-center">
@@ -130,8 +113,6 @@ export default function Home() {
                     </h1>
                     <p className="mono mt-4">
                         {new Date().toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase()}
-                        {' '}//{' '}
-                        UTC+{new Date().getTimezoneOffset() / -60}
                     </p>
                 </div>
                 <div className="mt-8" style={{ height: '1px', background: '#1E1E24' }} />
@@ -139,7 +120,7 @@ export default function Home() {
 
             <section className="px-6 py-6 md:px-16">
                 <p className="mono mb-4">CAMPIONATI // FILTRO ATTIVO</p>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap justify-center md:justify-start gap-3">
                     {LEAGUES.map(league => (
                         <LeagueToggle
                             key={league.key}

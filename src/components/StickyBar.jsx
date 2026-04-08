@@ -1,7 +1,11 @@
 import React from 'react';
 import { formatShortCountdown } from '@/utils/matchUtils';
 
+// STICKY BAR DISATTIVATA - decommenta per riattivarla
 export default function StickyBar({ visible, nextMatch }) {
+    return null; // Disattivata
+    
+    /*
     if (!nextMatch) return null;
 
     const { league, startTimestamp } = nextMatch;
@@ -35,4 +39,5 @@ export default function StickyBar({ visible, nextMatch }) {
             </div>
         </div>
     );
+    */
 }
