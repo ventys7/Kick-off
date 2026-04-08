@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import LeagueToggle from '@/components/LeagueToggle';
-import HeroCountdown from '@/components/HeroCountdown';
 import LeaguePanel from '@/components/LeaguePanel';
 import StickyBar from '@/components/StickyBar';
 import { fetchLeagueData, getCachedData, clearCache } from '@/utils/api';
@@ -25,6 +24,15 @@ function getDisabledLeagues() {
 
 function saveDisabledLeagues(disabled) {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(disabled));
+}
+
+function Spinner() {
+    return (
+        <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="2"/>
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="#ffffff" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+    );
 }
 
 export default function Home() {
@@ -101,8 +109,8 @@ export default function Home() {
         return (
             <div className="min-h-screen flex items-center justify-center" style={{ background: '#050505' }}>
                 <div className="text-center">
-                    <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
-                    <p className="mono">CARICAMENTO...</p>
+                    <Spinner />
+                    <p className="mono mt-4">CARICAMENTO...</p>
                 </div>
             </div>
         );
@@ -120,16 +128,15 @@ export default function Home() {
             <StickyBar visible={scrolled} nextMatch={globalNext} />
 
             <header className="relative px-6 pt-12 pb-8 md:px-16 md:pt-16">
-                <div className="flex items-center justify-between">
+                <div className="text-center">
                     <h1 className="text-3xl md:text-5xl font-black tracking-tighter text-white uppercase leading-none">
                         KICK-OFF
                     </h1>
-                    <div className="text-right">
-                        <p className="mono">UTC+{new Date().getTimezoneOffset() / -60}</p>
-                        <p className="mono mt-1">
-                            {new Date().toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase()}
-                        </p>
-                    </div>
+                    <p className="mono mt-4">
+                        {new Date().toLocaleDateString('it-IT', { weekday: 'short', day: '2-digit', month: 'short' }).toUpperCase()}
+                        {' '}//{' '}
+                        UTC+{new Date().getTimezoneOffset() / -60}
+                    </p>
                 </div>
                 <div className="mt-8" style={{ height: '1px', background: '#1E1E24' }} />
             </header>
@@ -148,8 +155,6 @@ export default function Home() {
                 </div>
                 <div className="mt-6" style={{ height: '1px', background: '#1E1E24' }} />
             </section>
-
-            {globalNext && <HeroCountdown nextMatch={globalNext} />}
 
             <section className="px-6 pb-24 md:px-16">
                 {enabledLeagues.length === 0 ? (
@@ -177,7 +182,7 @@ export default function Home() {
             </section>
 
             <footer className="px-6 py-8 md:px-16" style={{ borderTop: '1px solid #1E1E24' }}>
-                <p className="mono">KICK-OFF TIMER</p>
+                <p className="mono text-center">KICK-OFF TIMER</p>
             </footer>
         </div>
     );

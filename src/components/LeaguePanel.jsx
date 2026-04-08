@@ -1,6 +1,13 @@
 import React from 'react';
-import CountdownDisplay from './CountdownDisplay';
-import { Loader2 } from 'lucide-react';
+
+function Spinner() {
+    return (
+        <svg className="animate-spin" width="20" height="20" viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10" stroke="rgba(255,255,255,0.2)" strokeWidth="2"/>
+            <path d="M12 2a10 10 0 0 1 10 10" stroke="#ffffff" strokeWidth="2" strokeLinecap="round"/>
+        </svg>
+    );
+}
 
 function MatchRow({ match }) {
     const home = match.homeTeam.shortName || match.homeTeam.name;
@@ -15,8 +22,8 @@ function MatchRow({ match }) {
                 <img
                     src={`https://crests.football-data.org/${match.homeTeam.id}.png`}
                     alt={home}
-                    style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0, filter: 'brightness(0) invert(1)' }}
-                    onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(home)}&background=1E1E24&color=fff&size=22`; }}
+                    style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }}
+                    onError={(e) => { e.target.style.display = 'none'; }}
                 />
                 <span className="font-bold uppercase tracking-tight truncate" style={{ fontSize: 13, color: '#ffffff' }}>
                     {home}
@@ -34,8 +41,8 @@ function MatchRow({ match }) {
                 <img
                     src={`https://crests.football-data.org/${match.awayTeam.id}.png`}
                     alt={away}
-                    style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0, filter: 'brightness(0) invert(1)' }}
-                    onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(away)}&background=1E1E24&color=fff&size=22`; }}
+                    style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }}
+                    onError={(e) => { e.target.style.display = 'none'; }}
                 />
             </div>
         </div>
@@ -44,10 +51,7 @@ function MatchRow({ match }) {
 
 export default function LeaguePanel({ league, data, loading }) {
     return (
-        <div
-            className="opacity-100"
-            style={{ background: '#0F0F12', transition: 'opacity 0.3s ease' }}
-        >
+        <div style={{ background: '#0F0F12' }}>
             <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #1E1E24' }}>
                 <div className="flex items-center gap-3">
                     <span className="text-xl">{league.flag}</span>
@@ -70,7 +74,7 @@ export default function LeaguePanel({ league, data, loading }) {
             <div className="px-5 pt-5 pb-6">
                 {loading ? (
                     <div className="flex items-center justify-center py-10">
-                        <Loader2 className="w-5 h-5 text-white animate-spin" />
+                        <Spinner />
                         <span className="mono ml-3">CARICAMENTO...</span>
                     </div>
                 ) : !data ? (
@@ -93,20 +97,95 @@ export default function LeaguePanel({ league, data, loading }) {
                             ))}
                         </div>
 
-                        <CountdownDisplay targetTimestamp={data.startTimestamp} size="lg" />
-
-                        <p className="mono mt-3" style={{ color: '#88888D', fontSize: 11 }}>
-                            {new Date(data.startTimestamp * 1000).toLocaleDateString('it-IT', {
-                                weekday: 'short',
-                                day: '2-digit',
-                                month: 'short',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                            }).toUpperCase()}
-                        </p>
+                        <div className="text-center">
+                            <CountdownDisplay targetTimestamp={data.startTimestamp} />
+                            <p className="mono mt-3" style={{ color: '#88888D', fontSize: 11 }}>
+                                {new Date(data.startTimestamp * 1000).toLocaleDateString('it-IT', {
+                                    weekday: 'short',
+                                    day: '2-digit',
+                                    month: 'short',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                }).toUpperCase()}
+                            </p>
+                        </div>
                     </>
                 )}
             </div>
+        </div>
+    );
+}
+
+function formatCountdown(ms) {
+    if (ms <= 0) return { parts: [], isLive: true };
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    if (days > 0) {
+        return {
+            parts: [
+                { value: String(days).padStart(2, '0'), label: 'GG' },
+                { value: String(hours).padStart(2, '0'), label: 'HH' },
+                { value: String(minutes).padStart(2, '0'), label: 'MM' },
+            ],
+            isLive: false,
+        };
+    } else if (hours > 0) {
+        return {
+            parts: [
+                { value: String(hours).padStart(2, '0'), label: 'HH' },
+                { value: String(minutes).padStart(2, '0'), label: 'MM' },
+                { value: String(seconds).padStart(2, '0'), label: 'SS' },
+            ],
+            isLive: false,
+        };
+    } else {
+        return {
+            parts: [
+                { value: String(minutes).padStart(2, '0'), label: 'MM' },
+                { value: String(seconds).padStart(2, '0'), label: 'SS' },
+            ],
+            isLive: false,
+        };
+    }
+}
+
+function CountdownDisplay({ targetTimestamp }) {
+    const ms = targetTimestamp * 1000 - Date.now();
+    const { parts, isLive } = formatCountdown(ms);
+
+    if (isLive) {
+        return (
+            <span className="font-black tracking-tighter text-3xl" style={{ color: '#ffffff', animation: 'pulse-glow 1.5s infinite' }}>
+                LIVE
+            </span>
+        );
+    }
+
+    return (
+        <div className="flex items-center justify-center gap-1 md:gap-2">
+            {parts.map((part, i) => (
+                <React.Fragment key={part.label}>
+                    <div className="flex flex-col items-center">
+                        <div className="flex">
+                            {part.value.split('').map((digit, di) => (
+                                <span key={`${part.label}-${di}`} className="font-black text-4xl md:text-5xl tracking-tighter leading-none">
+                                    {digit}
+                                </span>
+                            ))}
+                        </div>
+                        <span className="font-mono" style={{ fontSize: 10, color: '#88888D', letterSpacing: '0.15em' }}>
+                            {part.label}
+                        </span>
+                    </div>
+                    {i < parts.length - 1 && (
+                        <span className="font-black pb-3 text-xl" style={{ color: '#88888D' }}>:</span>
+                    )}
+                </React.Fragment>
+            ))}
         </div>
     );
 }
