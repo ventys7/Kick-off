@@ -11,11 +11,12 @@ const LEAGUES = [
     { key: 'laliga', id: 87, name: 'La Liga', country: 'Spagna', flag: '🇪🇸', code: 'PD' },
 ];
 
-const STORAGE_KEY = 'kickoff_disabled_leagues';
+const STORAGE_KEY_DISABLED = 'kickoff_disabled_leagues';
+const STORAGE_KEY_ORDER = 'kickoff_league_order';
 
 function getDisabledLeagues() {
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const stored = localStorage.getItem(STORAGE_KEY_DISABLED);
         return stored ? JSON.parse(stored) : [];
     } catch {
         return [];
@@ -23,7 +24,23 @@ function getDisabledLeagues() {
 }
 
 function saveDisabledLeagues(disabled) {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(disabled));
+    localStorage.setItem(STORAGE_KEY_DISABLED, JSON.stringify(disabled));
+}
+
+function getLeagueOrder() {
+    try {
+        const stored = localStorage.getItem(STORAGE_KEY_ORDER);
+        if (stored) {
+            const order = JSON.parse(stored);
+            const keys = LEAGUES.map(l => l.key);
+            if (keys.every(k => order.includes(k))) return order;
+        }
+    } catch {}
+    return LEAGUES.map(l => l.key);
+}
+
+function saveLeagueOrder(order) {
+    localStorage.setItem(STORAGE_KEY_ORDER, JSON.stringify(order));
 }
 
 function Spinner() {
@@ -37,6 +54,7 @@ function Spinner() {
 
 export default function Home() {
     const [disabledLeagues, setDisabledLeagues] = useState(getDisabledLeagues);
+    const [leagueOrder, setLeagueOrder] = useState(getLeagueOrder);
     const [leagueData, setLeagueData] = useState({});
     const [loading, setLoading] = useState({});
     const [tick, setTick] = useState(0);
@@ -80,6 +98,26 @@ export default function Home() {
         });
     };
 
+    const moveLeagueUp = (key) => {
+        const order = [...leagueOrder];
+        const index = order.indexOf(key);
+        if (index > 0) {
+            [order[index - 1], order[index]] = [order[index], order[index - 1]];
+            setLeagueOrder(order);
+            saveLeagueOrder(order);
+        }
+    };
+
+    const moveLeagueDown = (key) => {
+        const order = [...leagueOrder];
+        const index = order.indexOf(key);
+        if (index < order.length - 1) {
+            [order[index], order[index + 1]] = [order[index + 1], order[index]];
+            setLeagueOrder(order);
+            saveLeagueOrder(order);
+        }
+    };
+
     const allNextMatches = enabledLeagues
         .map(l => {
             const data = leagueData[l.id];
@@ -90,6 +128,10 @@ export default function Home() {
         .sort((a, b) => a.startTimestamp - b.startTimestamp);
 
     const globalNext = allNextMatches[0] || null;
+
+    const orderedLeagues = leagueOrder
+        .map(key => LEAGUES.find(l => l.key === key))
+        .filter(Boolean);
 
     if (initialLoading && Object.keys(leagueData).length === 0) {
         return (
@@ -142,7 +184,7 @@ export default function Home() {
                     </div>
                 ) : (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px" style={{ background: '#1E1E24' }}>
-                        {LEAGUES.map(league => {
+                        {orderedLeagues.map(league => {
                             const isDisabled = disabledLeagues.includes(league.key);
                             if (isDisabled) return null;
                             return (
@@ -151,6 +193,10 @@ export default function Home() {
                                     league={league}
                                     data={leagueData[league.id]}
                                     loading={loading[league.id]}
+                                    onMoveUp={() => moveLeagueUp(league.key)}
+                                    onMoveDown={() => moveLeagueDown(league.key)}
+                                    isFirst={leagueOrder.indexOf(league.key) === 0}
+                                    isLast={leagueOrder.indexOf(league.key) === leagueOrder.length - 1}
                                 />
                             );
                         })}

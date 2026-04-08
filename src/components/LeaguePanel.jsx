@@ -49,7 +49,7 @@ function MatchRow({ match }) {
     );
 }
 
-export default function LeaguePanel({ league, data, loading }) {
+export default function LeaguePanel({ league, data, loading, onMoveUp, onMoveDown, isFirst, isLast }) {
     const inProgressRounds = data?.inProgressRounds || [];
     const roundsText = inProgressRounds.length > 1 
         ? inProgressRounds.sort((a, b) => a - b).join(', ') 
@@ -57,10 +57,10 @@ export default function LeaguePanel({ league, data, loading }) {
 
     return (
         <div style={{ background: '#0F0F12' }}>
-            <div className="px-5 py-4" style={{ borderBottom: '1px solid #1E1E24' }}>
-                <div className="flex items-center gap-3">
+            <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #1E1E24' }}>
+                <div className="flex items-center gap-3 flex-1 min-w-0">
                     <span className="text-xl">{league.flag}</span>
-                    <div className="flex-1">
+                    <div className="flex-1 min-w-0">
                         <p className="font-black uppercase tracking-tight text-white" style={{ fontSize: 15 }}>
                             {league.name}
                             {inProgressRounds.length > 0 && (
@@ -71,6 +71,34 @@ export default function LeaguePanel({ league, data, loading }) {
                         </p>
                         <p className="mono">{league.country.toUpperCase()} // {league.code}</p>
                     </div>
+                </div>
+                <div className="flex gap-1 ml-2">
+                    <button
+                        onClick={onMoveUp}
+                        disabled={isFirst}
+                        className="w-7 h-7 flex items-center justify-center border text-sm transition-colors"
+                        style={{
+                            borderColor: isFirst ? '#1E1E24' : '#88888D',
+                            background: 'transparent',
+                            color: isFirst ? '#1E1E24' : '#88888D',
+                            cursor: isFirst ? 'not-allowed' : 'pointer',
+                        }}
+                    >
+                        ↑
+                    </button>
+                    <button
+                        onClick={onMoveDown}
+                        disabled={isLast}
+                        className="w-7 h-7 flex items-center justify-center border text-sm transition-colors"
+                        style={{
+                            borderColor: isLast ? '#1E1E24' : '#88888D',
+                            background: 'transparent',
+                            color: isLast ? '#1E1E24' : '#88888D',
+                            cursor: isLast ? 'not-allowed' : 'pointer',
+                        }}
+                    >
+                        ↓
+                    </button>
                 </div>
             </div>
 
