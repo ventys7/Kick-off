@@ -1,0 +1,59 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    * {
+        border-color: #1E1E24;
+    }
+
+    body {
+        background-color: #050505;
+        font-family: 'Inter Tight', sans-serif;
+        color: #ffffff;
+    }
+}
+
+@keyframes flip-down {
+    0% { transform: translateY(-8px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes pulse-glow {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+@keyframes shutter-open {
+    0% { transform: scaleY(0); opacity: 0; }
+    100% { transform: scaleY(1); opacity: 1; }
+}
+
+.countdown-digit {
+    animation: flip-down 0.15s ease-out;
+    display: inline-block;
+}
+
+.league-panel-enter {
+    animation: shutter-open 0.35s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+    transform-origin: top;
+}
+
+.mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: #88888D;
+}
+
+.toggle-switch {
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+}
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: #050505; }
+::-webkit-scrollbar-thumb { background: #1E1E24; }
