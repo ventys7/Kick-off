@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import LeagueToggle from '@/components/LeagueToggle';
 import LeaguePanel from '@/components/LeaguePanel';
 import StickyBar from '@/components/StickyBar';
-import { fetchLeagueData, getCachedData, clearCache } from '@/utils/api';
+import { fetchLeagueData } from '@/utils/api';
 import { findNextMatches } from '@/utils/matchUtils';
 
 const LEAGUES = [
@@ -42,6 +42,7 @@ export default function Home() {
     const [tick, setTick] = useState(0);
     const [scrolled, setScrolled] = useState(false);
     const [initialLoading, setInitialLoading] = useState(true);
+    const [isFetching, setIsFetching] = useState(false);
     const [flashLeague, setFlashLeague] = useState(null);
 
     const enabledLeagues = LEAGUES.filter(l => !disabledLeagues.includes(l.key));
@@ -58,31 +59,26 @@ export default function Home() {
     }, []);
 
     const fetchAll = useCallback(async () => {
+        if (isFetching) return;
+        setIsFetching(true);
+
         for (const league of enabledLeagues) {
-            const cached = getCachedData();
-            if (cached[league.key]) continue;
-            setLoading(prev => ({ ...prev, [league.key]: true }));
+            if (leagueData[league.id]) continue;
+            setLoading(prev => ({ ...prev, [league.id]: true }));
             const data = await fetchLeagueData(league.id);
             if (data?.events) {
                 const nextInfo = findNextMatches(data.events);
-                setLeagueData(prev => ({ ...prev, [league.key]: nextInfo }));
+                setLeagueData(prev => ({ ...prev, [league.id]: nextInfo }));
             }
-            setLoading(prev => ({ ...prev, [league.key]: false }));
+            setLoading(prev => ({ ...prev, [league.id]: false }));
         }
         setInitialLoading(false);
+        setIsFetching(false);
     }, [enabledLeagues]);
 
     useEffect(() => {
         fetchAll();
     }, [fetchAll]);
-
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setLeagueData({});
-            clearCache();
-        }, 5 * 60 * 1000);
-        return () => clearInterval(interval);
-    }, []);
 
     const toggleLeague = (key) => {
         setDisabledLeagues(prev => {
@@ -96,7 +92,7 @@ export default function Home() {
 
     const allNextMatches = enabledLeagues
         .map(l => {
-            const data = leagueData[l.key];
+            const data = leagueData[l.id];
             if (!data) return null;
             return { ...data, league: l };
         })
@@ -172,8 +168,8 @@ export default function Home() {
                                 <LeaguePanel
                                     key={league.key}
                                     league={league}
-                                    data={leagueData[league.key]}
-                                    loading={loading[league.key]}
+                                    data={leagueData[league.id]}
+                                    loading={loading[league.id]}
                                 />
                             );
                         })}

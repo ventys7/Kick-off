@@ -1,6 +1,6 @@
 const API_BASE = 'https://kick-off-tau.vercel.app/api/league';
 const CACHE_KEY = 'kickoff_data_cache';
-const CACHE_DURATION = 5 * 60 * 1000;
+const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 ore
 
 export function getCachedData() {
     try {
@@ -18,25 +18,33 @@ export function setCachedData(data) {
     localStorage.setItem(CACHE_KEY, JSON.stringify({ data, timestamp: Date.now() }));
 }
 
-export async function fetchLeagueData(leagueId) {
-    const cached = getCachedData();
-    if (cached[leagueId]) {
-        return cached[leagueId];
-    }
-
+async function fetchAndCache(leagueId) {
     try {
         const response = await fetch(`${API_BASE}/${leagueId}`);
-        if (!response.ok) throw new Error(`API error: ${response.status}`);
+        if (!response.ok) throw new Error();
         const data = await response.json();
-        if (data.error) throw new Error(data.error);
+        if (data.error) throw new Error();
 
+        const cached = getCachedData();
         const newCache = { ...cached, [leagueId]: data };
         setCachedData(newCache);
         return data;
     } catch (error) {
-        console.error(`Errore fetch league ${leagueId}:`, error);
-        return cached[leagueId] || null;
+        console.error(`Errore fetch league ${leagueId}`);
+        return null;
     }
+}
+
+// Stale-while-revalidate: ritorna subito cache se esiste, aggiorna in background
+export async function fetchLeagueData(leagueId) {
+    const cached = getCachedData();
+
+    if (cached[leagueId]) {
+        fetchAndCache(leagueId).catch(() => {});
+        return cached[leagueId];
+    }
+
+    return fetchAndCache(leagueId);
 }
 
 export function clearCache() {
