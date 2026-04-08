@@ -3,7 +3,7 @@ import LeagueToggle from '@/components/LeagueToggle';
 import HeroCountdown from '@/components/HeroCountdown';
 import LeaguePanel from '@/components/LeaguePanel';
 import StickyBar from '@/components/StickyBar';
-import { fetchLeagueData, clearCache } from '@/utils/api';
+import { fetchLeagueData, getCachedData, clearCache } from '@/utils/api';
 import { findNextMatches } from '@/utils/matchUtils';
 
 const LEAGUES = [
@@ -51,7 +51,8 @@ export default function Home() {
 
     const fetchAll = useCallback(async () => {
         for (const league of enabledLeagues) {
-            if (leagueData[league.key]) continue;
+            const cached = getCachedData();
+            if (cached[league.key]) continue;
             setLoading(prev => ({ ...prev, [league.key]: true }));
             const data = await fetchLeagueData(league.id);
             if (data?.events) {
@@ -61,7 +62,7 @@ export default function Home() {
             setLoading(prev => ({ ...prev, [league.key]: false }));
         }
         setInitialLoading(false);
-    }, [enabledLeagues, leagueData]);
+    }, [enabledLeagues]);
 
     useEffect(() => {
         fetchAll();
