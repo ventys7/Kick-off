@@ -1,12 +1,10 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 
 export default function LeagueToggle({ league, active, onToggle }) {
     return (
-        <motion.button
+        <button
             onClick={onToggle}
-            whileTap={{ scale: 0.97 }}
-            className={`toggle-switch relative px-5 py-3 border flex items-center gap-3 transition-all duration-300 ${
+            className={`toggle-switch relative px-5 py-3 border flex items-center gap-3 transition-all duration-200 ${
                 active ? 'border-white/25 bg-white/5' : 'border-white/6 bg-transparent opacity-40'
             }`}
             style={{ minWidth: 160 }}
@@ -19,14 +17,13 @@ export default function LeagueToggle({ league, active, onToggle }) {
                         background: 'transparent',
                     }}
                 />
-                <motion.div
-                    animate={{ x: active ? 16 : 2 }}
-                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    className="absolute top-1"
+                <div
+                    className="absolute top-1 transition-transform duration-200"
                     style={{
                         width: 12,
                         height: 10,
                         background: active ? '#ffffff' : '#88888D',
+                        transform: active ? 'translateX(16px)' : 'translateX(2px)',
                     }}
                 />
             </div>
@@ -45,6 +42,6 @@ export default function LeagueToggle({ league, active, onToggle }) {
                     {active ? 'ATTIVO' : 'DISATTIVATO'}
                 </p>
             </div>
-        </motion.button>
+        </button>
     );
 }

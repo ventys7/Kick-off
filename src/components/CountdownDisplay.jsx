@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
 
 function formatCountdown(ms) {
     if (ms <= 0) return { parts: [], isLive: true };

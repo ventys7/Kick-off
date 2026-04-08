@@ -33,6 +33,7 @@ export default function Home() {
     const [loading, setLoading] = useState({});
     const [tick, setTick] = useState(0);
     const [scrolled, setScrolled] = useState(false);
+    const [initialLoading, setInitialLoading] = useState(true);
     const [flashLeague, setFlashLeague] = useState(null);
 
     const enabledLeagues = LEAGUES.filter(l => !disabledLeagues.includes(l.key));
@@ -59,6 +60,7 @@ export default function Home() {
             }
             setLoading(prev => ({ ...prev, [league.key]: false }));
         }
+        setInitialLoading(false);
     }, [enabledLeagues, leagueData]);
 
     useEffect(() => {
@@ -93,6 +95,17 @@ export default function Home() {
         .sort((a, b) => a.startTimestamp - b.startTimestamp);
 
     const globalNext = allNextMatches[0] || null;
+
+    if (initialLoading && Object.keys(leagueData).length === 0) {
+        return (
+            <div className="min-h-screen flex items-center justify-center" style={{ background: '#050505' }}>
+                <div className="text-center">
+                    <div className="w-8 h-8 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
+                    <p className="mono">CARICAMENTO...</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen">

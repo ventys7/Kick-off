@@ -17,10 +17,10 @@ function TeamCrest({ teamId, name, size = 40 }) {
         <div className="flex flex-col items-center gap-3">
             <div className="flex items-center justify-center" style={{ width: size, height: size }}>
                 <img
-                    src={`https://crests.football-data.org/${teamId}.svg`}
+                    src={`https://crests.football-data.org/${teamId}.png`}
                     alt={name}
-                    style={{ width: size, height: size, objectFit: 'contain', filter: 'grayscale(0.3)' }}
-                    onError={(e) => { e.target.style.display = 'none'; }}
+                    style={{ width: size, height: size, objectFit: 'contain', filter: 'brightness(0) invert(1)' }}
+                    onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(name)}&background=1E1E24&color=fff&size=${size}`; }}
                 />
             </div>
             <span

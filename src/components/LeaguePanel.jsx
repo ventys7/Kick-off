@@ -1,5 +1,4 @@
 import React from 'react';
-import { motion } from 'framer-motion';
 import CountdownDisplay from './CountdownDisplay';
 import { Loader2 } from 'lucide-react';
 
@@ -14,10 +13,10 @@ function MatchRow({ match }) {
         >
             <div className="flex items-center gap-3 flex-1 min-w-0">
                 <img
-                    src={`https://crests.football-data.org/${match.homeTeam.id}.svg`}
+                    src={`https://crests.football-data.org/${match.homeTeam.id}.png`}
                     alt={home}
-                    style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }}
-                    onError={(e) => { e.target.style.display = 'none'; }}
+                    style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0, filter: 'brightness(0) invert(1)' }}
+                    onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(home)}&background=1E1E24&color=fff&size=22`; }}
                 />
                 <span className="font-bold uppercase tracking-tight truncate" style={{ fontSize: 13, color: '#ffffff' }}>
                     {home}
@@ -33,10 +32,10 @@ function MatchRow({ match }) {
                     {away}
                 </span>
                 <img
-                    src={`https://crests.football-data.org/${match.awayTeam.id}.svg`}
+                    src={`https://crests.football-data.org/${match.awayTeam.id}.png`}
                     alt={away}
-                    style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0 }}
-                    onError={(e) => { e.target.style.display = 'none'; }}
+                    style={{ width: 22, height: 22, objectFit: 'contain', flexShrink: 0, filter: 'brightness(0) invert(1)' }}
+                    onError={(e) => { e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(away)}&background=1E1E24&color=fff&size=22`; }}
                 />
             </div>
         </div>
@@ -45,13 +44,9 @@ function MatchRow({ match }) {
 
 export default function LeaguePanel({ league, data, loading }) {
     return (
-        <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0, scaleY: 0 }}
-            transition={{ duration: 0.3 }}
-            className="league-panel-enter"
-            style={{ background: '#0F0F12', transformOrigin: 'top' }}
+        <div
+            className="opacity-100"
+            style={{ background: '#0F0F12', transition: 'opacity 0.3s ease' }}
         >
             <div className="px-5 py-4 flex items-center justify-between" style={{ borderBottom: '1px solid #1E1E24' }}>
                 <div className="flex items-center gap-3">
@@ -66,7 +61,7 @@ export default function LeaguePanel({ league, data, loading }) {
 
                 {data?.inProgressRounds?.length > 0 && (
                     <div className="flex items-center gap-1.5">
-                        <div className="w-1.5 h-1.5" style={{ background: '#ffffff', animation: 'pulse-glow 1.5s infinite' }} />
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#ffffff', animation: 'pulse-glow 1.5s infinite' }} />
                         <span className="mono text-white" style={{ fontSize: 10 }}>LIVE</span>
                     </div>
                 )}
@@ -76,7 +71,7 @@ export default function LeaguePanel({ league, data, loading }) {
                 {loading ? (
                     <div className="flex items-center justify-center py-10">
                         <Loader2 className="w-5 h-5 text-white animate-spin" />
-                        <span className="mono ml-3">CARICAMENTO DATI...</span>
+                        <span className="mono ml-3">CARICAMENTO...</span>
                     </div>
                 ) : !data ? (
                     <div className="py-10 text-center">
@@ -112,6 +107,6 @@ export default function LeaguePanel({ league, data, loading }) {
                     </>
                 )}
             </div>
-        </motion.div>
+        </div>
     );
 }
