@@ -72,7 +72,7 @@ export default function LeaguePanel({ league, data, loading, onMoveUp, onMoveDow
                         <p className="mono">{league.country.toUpperCase()} // {league.code}</p>
                     </div>
                 </div>
-                <div className="flex gap-1 ml-2">
+                <div className="flex gap-1 ml-2 md:hidden">
                     <button
                         onClick={onMoveUp}
                         disabled={isFirst}
