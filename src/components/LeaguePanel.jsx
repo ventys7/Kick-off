@@ -49,7 +49,7 @@ function MatchRow({ match }) {
     );
 }
 
-export default function LeaguePanel({ league, data, loading, onMoveUp, onMoveDown, isFirst, isLast }) {
+export default function LeaguePanel({ league, data, loading, onMoveUp, onMoveDown, isFirst, isLast, hasFormations }) {
     const inProgressRounds = data?.inProgressRounds || [];
     const roundsText = inProgressRounds.length > 1 
         ? inProgressRounds.sort((a, b) => a - b).join(', ') 
@@ -127,6 +127,14 @@ export default function LeaguePanel({ league, data, loading, onMoveUp, onMoveDow
                                 <MatchRow key={match.id} match={match} />
                             ))}
                         </div>
+
+                        {hasFormations && (
+                            <div className="text-center mb-4 py-2" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                                <span className="font-bold" style={{ color: '#ffffff', fontSize: 12 }}>
+                                    🔔 FORMAZIONI DISPONIBILI 📋
+                                </span>
+                            </div>
+                        )}
 
                         <div className="text-center">
                             <CountdownDisplay targetTimestamp={data.startTimestamp} />

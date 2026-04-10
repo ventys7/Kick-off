@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import LeagueToggle from '@/components/LeagueToggle';
 import LeaguePanel from '@/components/LeaguePanel';
 import StickyBar from '@/components/StickyBar';
-import { fetchLeagueData } from '@/utils/api';
+import { fetchLeagueData, fetchMatchFormations } from '@/utils/api';
 import { findNextMatches } from '@/utils/matchUtils';
 
 const LEAGUES = [
@@ -52,6 +52,8 @@ function Spinner() {
     );
 }
 
+const TWO_HOURS_SECONDS = 2 * 60 * 60;
+
 export default function Home() {
     const [disabledLeagues, setDisabledLeagues] = useState(getDisabledLeagues);
     const [leagueOrder, setLeagueOrder] = useState(getLeagueOrder);
@@ -60,6 +62,7 @@ export default function Home() {
     const [tick, setTick] = useState(0);
     const [initialLoading, setInitialLoading] = useState(true);
     const [isFetching, setIsFetching] = useState(false);
+    const [formationsChecked, setFormationsChecked] = useState({});
 
     const enabledLeagues = LEAGUES.filter(l => !disabledLeagues.includes(l.key));
 
@@ -89,6 +92,47 @@ export default function Home() {
     useEffect(() => {
         fetchAll();
     }, [fetchAll]);
+
+    const checkFormations = useCallback(async () => {
+        const now = Date.now() / 1000;
+        
+        for (const league of enabledLeagues) {
+            const data = leagueData[league.id];
+            if (!data?.matches) continue;
+            
+            for (const match of data.matches) {
+                const timeToMatch = match.startTimestamp - now;
+                
+                if (timeToMatch <= TWO_HOURS_SECONDS && timeToMatch > 0) {
+                    if (formationsChecked[match.id]) continue;
+                    
+                    const formations = await fetchMatchFormations(match.id);
+                    
+                    if (formations && formations.hasLineups) {
+                        setFormationsChecked(prev => ({
+                            ...prev,
+                            [match.id]: true
+                        }));
+                    } else {
+                        setFormationsChecked(prev => ({
+                            ...prev,
+                            [match.id]: formationsChecked[match.id] || false
+                        }));
+                    }
+                }
+            }
+        }
+    }, [enabledLeagues, leagueData, formationsChecked]);
+
+    useEffect(() => {
+        checkFormations();
+        
+        const interval = setInterval(() => {
+            checkFormations();
+        }, 3 * 60 * 1000);
+        
+        return () => clearInterval(interval);
+    }, [checkFormations]);
 
     const toggleLeague = (key) => {
         setDisabledLeagues(prev => {
@@ -132,6 +176,11 @@ export default function Home() {
     const orderedLeagues = leagueOrder
         .map(key => LEAGUES.find(l => l.key === key))
         .filter(Boolean);
+
+    const getMatchFormationsStatus = (matches) => {
+        if (!matches) return false;
+        return matches.some(m => formationsChecked[m.id]);
+    };
 
     if (initialLoading && Object.keys(leagueData).length === 0) {
         return (
@@ -187,12 +236,15 @@ export default function Home() {
                         {orderedLeagues.map(league => {
                             const isDisabled = disabledLeagues.includes(league.key);
                             if (isDisabled) return null;
+                            const data = leagueData[league.id];
+                            const hasFormations = data?.matches ? getMatchFormationsStatus(data.matches) : false;
                             return (
                                 <LeaguePanel
                                     key={league.key}
                                     league={league}
-                                    data={leagueData[league.id]}
+                                    data={data}
                                     loading={loading[league.id]}
+                                    hasFormations={hasFormations}
                                     onMoveUp={() => moveLeagueUp(league.key)}
                                     onMoveDown={() => moveLeagueDown(league.key)}
                                     isFirst={leagueOrder.indexOf(league.key) === 0}
