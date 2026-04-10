@@ -129,7 +129,7 @@ export default function LeaguePanel({ league, data, loading, onMoveUp, onMoveDow
                         </div>
 
                         {hasFormations && (
-                            <div className="text-center mb-4 py-2" style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
+                            <div className="text-center mb-4 py-2" style={{ background: 'transparent', border: 'none' }}>
                                 <span className="font-bold" style={{ color: '#ffffff', fontSize: 12 }}>
                                     🔔 FORMAZIONI DISPONIBILI 📋
                                 </span>

@@ -179,9 +179,7 @@ export default function Home() {
 
     const getMatchFormationsStatus = (matches) => {
         if (!matches) return false;
-        // PER TEST LOCALE: forzare sempre true per vedere il badge
-        // Rimuovere questa riga in produzione
-        return true; // return matches.some(m => formationsChecked[m.id]);
+        return matches.some(m => formationsChecked[m.id]);
     };
 
     if (initialLoading && Object.keys(leagueData).length === 0) {
